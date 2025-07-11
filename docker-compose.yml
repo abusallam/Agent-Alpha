@@ -9,6 +9,8 @@ services:
     build:
       context: ./agent_zero_base
       dockerfile: docker/run/Dockerfile
+      args:
+        - BRANCH=main
     ports:
       - "8080:8080" # Assuming UI runs on 8080
     environment:
