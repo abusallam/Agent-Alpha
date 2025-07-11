@@ -1,0 +1,66 @@
+version: '3.9'
+
+networks:
+  agents-net:
+    driver: bridge
+
+services:
+  agent_zero:
+    build:
+      context: ./agent_zero_base
+      dockerfile: docker/run/Dockerfile
+    ports:
+      - "8080:8080" # Assuming UI runs on 8080
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+      - REDIS_URL=redis://redis:6379/0
+      - AGENT_ALPHA_URL=http://agent_alpha:8000
+      - RESEARCH_AGENT_URL=http://research_agent:8000
+    depends_on:
+      - livekit
+      - redis
+      - agent_alpha
+      - research_agent
+    networks:
+      - agents-net
+    restart: unless-stopped
+
+  agent_alpha:
+    build:
+      context: ./alpha_agent/backend
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    networks:
+      - agents-net
+    restart: unless-stopped
+
+  research_agent:
+    build:
+      context: ./research_agent/WebWalker
+    networks:
+      - agents-net
+    restart: unless-stopped
+
+  livekit:
+    image: livekit/livekit-server:latest
+    ports:
+      - "7880:7880"
+      - "7881:7881"
+    environment:
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET}
+    networks:
+      - agents-net
+    restart: unless-stopped
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - agents-net
+    restart: unless-stopped

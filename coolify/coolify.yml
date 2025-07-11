@@ -1,0 +1,9 @@
+# coolify/coolify.yml
+image: alpha_agent/backend/Dockerfile
+port: 8000
+health: /health
+routes:
+  - path: /
+    method: GET
+    handler: root
+

@@ -1,0 +1,13 @@
+name: CI
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with: python-version: '3.x'
+    - run: |
+        cd alpha_agent/backend
+        pip install -r requirements.txt
+        pytest
