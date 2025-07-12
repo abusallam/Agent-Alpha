@@ -714,6 +714,13 @@
                                                         </template>
                                                     </select>
                                                 </template>
+
+                                                <!-- External Link field -->
+                                                <template x-if="field.type === 'external-link'">
+                                                    <a :href="field.url" target="_blank" class="btn btn-field" :title="field.description">
+                                                        <span x-text="field.title"></span> &#x2197; <!-- External link icon -->
+                                                    </a>
+                                                </template>
                                             </div>
                                         </div>
                                     </template>

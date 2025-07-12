@@ -192,6 +192,8 @@ Runs Bandit, pip-audit, Snyk, and npm audit.
 - `/prompt/` PUT to update dynamic prompt
 - `/logs/ws` for WebSocket streaming
 
+*(Note: The Agent Zero system is being enhanced to interact with the `/agents/` and `/tasks/` endpoints. Full functionality of these interactions is contingent on the implementation of these API endpoints in the Agent Alpha backend.)*
+
 Full OpenAPI spec in `docs/api-reference.md`
 
 ---
