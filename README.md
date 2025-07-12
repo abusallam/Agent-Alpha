@@ -56,7 +56,7 @@ This will build the Docker images for all agents and start all the services defi
 
 Once all the services are running, you can access the Agent Zero UI in your browser at:
 
-[http://localhost:8080](http://localhost:8080)
+[http://localhost:8081](http://localhost:8081)
 
 ## Services
 
