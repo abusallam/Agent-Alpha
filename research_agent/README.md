@@ -30,6 +30,10 @@ alt="Alibaba-NLP%2FWebAgent | Trendshift" style="width: 250px; height: 55px;" wi
 
 > 💥 💥 💥 Stay tuned for more updates! We are working on building native agentic model based on the Browser and more open-domain environments!
 
+> **Note on Integration with Agent Zero:**
+> - When running this project as part of the larger multi-agent platform (from the root `docker-compose.yml`), the UIs for WebWalker and WebDancer can be accessed via links in the Agent Zero UI (Settings -> External Services).
+> - The WebSailor version from `abusallam/Websailor.git` (if its content is in the `WebSailor/` subdirectory) is integrated with Agent Zero via an internal API for research tasks. This version does not have its own UI linked from Agent Zero but requires an SGLang server (see root `docker-compose.yml`).
+
 - [**WebSailor**](WebSailor) (Preprint 2025) - WebSailor: Navigating Super-human Reasoning for Web Agent
 - [**WebDancer**](WebDancer) (Preprint 2025) - WebDancer: Towards Autonomous Information Seeking Agency
 - [**WebWalker**](WebWalker) (ACL 2025) - WebWalker: Benchmarking LLMs in Web Traversal

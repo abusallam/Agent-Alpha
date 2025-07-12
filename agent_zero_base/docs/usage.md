@@ -71,6 +71,16 @@ Access the chat history in JSON format
 > [!TIP]
 > Use the Context and History buttons to understand how the agent interprets your instructions and debug any unexpected behavior.
 
+#### Accessing External Agent UIs
+Agent Zero facilitates easy access to the user interfaces of other integrated agent systems directly from its settings panel:
+1. Click the **Settings** button in the sidebar.
+2. Navigate to the **External Services** tab.
+3. Here you will find direct links to:
+    - **Agent Alpha UI**: Access the main dashboard and monitoring tools for the Agent Alpha system.
+    - **WebWalker UI**: Interact with the WebWalker research agent via its Streamlit interface.
+    - **WebDancer UI**: Engage with the WebDancer deep research agent through its Gradio interface.
+    *(Note: Ensure these services are running via the main `docker-compose.yml` to be accessible.)*
+
 ### File Attachments
 Agent Zero supports direct file attachments in the chat interface for seamless file operations:
 
@@ -119,12 +129,31 @@ Agent Zero might then:
 
 This example demonstrates how to combine multiple tools to achieve an analysis task. By mastering prompt engineering and tool usage, you can unlock the full potential of Agent Zero to solve complex problems.
 
-## Multi-Agent Cooperation
-One of Agent Zero's unique features is multi-agent cooperation.
+## Multi-Agent Cooperation & Delegation
+Agent Zero is designed not only for direct task execution but also for orchestrating and cooperating with other specialized AI agents and systems. This enhances its problem-solving capabilities significantly.
 
-* **Creating Sub-Agents:** Agents can create sub-agents to delegate sub-tasks.  This helps manage complexity and distribute workload.
-* **Communication:** Agents can communicate with each other, sharing information and coordinating actions. The system prompt and message history play a key role in guiding this communication.
-* **Hierarchy:** Agent Zero uses a [hierarchical structure](architecture.md#agent-hierarchy-and-communication), with superior agents delegating tasks to subordinates.  This allows for structured problem-solving and efficient resource allocation.
+### Using Subordinates (Internal Delegation)
+* **Creating Sub-Agents:** Agent Zero can create sub-agents using the `call_subordinate` tool to delegate specific sub-tasks. This helps manage complexity and distribute workload internally.
+* **Communication:** Agent Zero communicates with these subordinates, sharing information and coordinating actions. The system prompt and message history guide this communication.
+* **Hierarchy:** This internal delegation follows a [hierarchical structure](architecture.md#agent-hierarchy-and-communication), allowing for structured problem-solving.
+
+### Delegating to External Agent Systems (New)
+Agent Zero now possesses enhanced capabilities to delegate tasks to more powerful or specialized external agent systems like Agent Alpha and dedicated Researcher Agents.
+
+*   **Delegating to Agent Alpha (`delegate_to_agent_alpha` tool):**
+    *   **Purpose:** Use this tool when you need to offload complex tasks, manage other intelligent agents, or require functionalities that Agent Alpha is designed for (e.g., creating new specialized agents, running long-term autonomous tasks).
+    *   **Usage:** Instruct Agent Zero to use `delegate_to_agent_alpha` with an `action` (like `create_agent` or `run_task`), a `task_description`, and optionally an `agent_name` or `agent_definition` (as a JSON string for creating agents).
+    *   **Note:** The full functionality of this tool depends on the corresponding API endpoints (e.g., `/agents/`, `/tasks/`) being implemented and active in the Agent Alpha backend service. Agent Zero will attempt the delegation, and the tool will report the outcome.
+
+*   **Performing Web Research with Specialized Agents (`perform_web_research` tool):**
+    *   **Purpose:** For tasks requiring in-depth web research, complex question-answering based on internet data, or specific web navigation challenges, Agent Zero can delegate to specialized researcher agents like WebDancer, WebWalker, or the newly integrated WebSailor (from abusallam/Websailor).
+    *   **Usage:** Instruct Agent Zero to use `perform_web_research` with your `query`.
+        *   You can specify `research_agent_type` ('WebDancer', 'WebWalker', 'WebSailor'). Default is 'WebDancer'.
+        *   Optional parameters include `max_steps` (for all types, defaults to 7), `reasoning_enabled` (boolean for WebDancer, defaults to true), and `sglang_model_identifier` (string for WebSailor, to override its API's default SGLang model).
+    *   **Interaction:** This tool now calls internal APIs for these researcher agents. Agent Zero will receive and relay their findings or any errors encountered.
+    *   **Note on WebSailor:** The integrated WebSailor (abusallam/Websailor) requires an SGLang model server, which is configured in `docker-compose.yml`. Ensure the environment variables for `WEBSAILOR_SGLANG_MODEL_IDENTIFIER` and related tokenizer paths are correctly set in your `.env` file. Its `ReactAgent` also has a hardcoded dependency on `localhost:6001` for the SGLang server, which requires careful network setup or modification of `ReactAgent` for optimal Docker-based deployment (see `docker-compose.yml` comments).
+
+By understanding these delegation mechanisms, you can guide Agent Zero to act as a central orchestrator, choosing the best approach—whether solving directly, using an internal subordinate, or delegating to an external specialized agent system—to tackle complex user requests.
 
 ![](res/physics.png)
 ![](res/physics-2.png)

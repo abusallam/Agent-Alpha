@@ -25,7 +25,19 @@ services:
       - livekit
       - redis
       - agent_alpha
-      - research_agent
+      - agent_alpha_frontend
+      - research_agent_webwalker
+      - research_agent_webdancer
+    networks:
+      - agents-net
+    restart: unless-stopped
+
+  agent_alpha_frontend:
+    build:
+      context: ./alpha_agent/frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8082:80" # Nginx serves on port 80 in container
     networks:
       - agents-net
     restart: unless-stopped
@@ -36,16 +48,148 @@ services:
     environment:
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+    # Needs to expose its backend port if agent_alpha_frontend needs to call it via host network,
+    # but for container-to-container communication via agents-net, direct exposure isn't strictly needed
+    # For now, assuming frontend calls it via internal docker network http://agent_alpha:PORT
     networks:
       - agents-net
     restart: unless-stopped
 
-  research_agent:
+  research_agent_webwalker_ui: # Explicitly named for UI
     build:
       context: ./research_agent/WebWalker
+      dockerfile: Dockerfile
+    ports:
+      - "7860:8501" # Streamlit default port (CMD from Dockerfile runs Streamlit app)
+    environment:
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL_SERVER=${OPENAI_MODEL_SERVER}
     networks:
       - agents-net
     restart: unless-stopped
+
+  research_agent_webwalker_api:
+    build:
+      context: ./research_agent/WebWalker # Uses the same build context and Dockerfile
+      dockerfile: Dockerfile
+    command: uvicorn src.api_wrapper:app --host 0.0.0.0 --port 8000 # Override CMD for API
+    environment: # Ensure API has necessary keys for WebWalker agent
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL_SERVER=${OPENAI_MODEL_SERVER}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      # Add any other specific ENV VARS needed by WebWalker's core logic if different from UI
+    networks:
+      - agents-net
+    restart: unless-stopped
+    # No host ports exposed, for internal Agent Zero access
+
+  research_agent_webdancer_ui: # Explicitly named for UI
+    build:
+      context: ./research_agent/WebDancer
+      dockerfile: Dockerfile
+    ports:
+      - "7861:7860" # Gradio port (CMD from Dockerfile runs Gradio app)
+    environment:
+      - GOOGLE_SEARCH_KEY=${GOOGLE_SEARCH_KEY}
+      - JINA_API_KEY=${JINA_API_KEY}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - WEBDANCER_LLM_BACKEND_TYPE=${WEBDANCER_LLM_BACKEND_TYPE:-DASHSCOPE_QWEN} # Default if not set
+      - WEBDANCER_QWEN_MODEL=${WEBDANCER_QWEN_MODEL:-qwen-max}
+      - WEBDANCER_OAI_MODEL_SERVER=${WEBDANCER_OAI_MODEL_SERVER}
+      - WEBDANCER_OAI_MODEL_NAME=${WEBDANCER_OAI_MODEL_NAME}
+      - WEBDANCER_OAI_API_KEY=${WEBDANCER_OAI_API_KEY:-EMPTY}
+    networks:
+      - agents-net
+    restart: unless-stopped
+
+  research_agent_webdancer_api:
+    build:
+      context: ./research_agent/WebDancer # Uses the same build context and Dockerfile
+      dockerfile: Dockerfile
+    command: uvicorn demos.api_wrapper:app --host 0.0.0.0 --port 8001 # Override CMD for API, use port 8001
+    environment: # Ensure API has necessary keys for WebDancer agent
+      - GOOGLE_SEARCH_KEY=${GOOGLE_SEARCH_KEY}
+      - JINA_API_KEY=${JINA_API_KEY}
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY}
+      - WEBDANCER_LLM_BACKEND_TYPE=${WEBDANCER_LLM_BACKEND_TYPE:-DASHSCOPE_QWEN}
+      - WEBDANCER_QWEN_MODEL=${WEBDANCER_QWEN_MODEL:-qwen-max}
+      - WEBDANCER_OAI_MODEL_SERVER=${WEBDANCER_OAI_MODEL_SERVER}
+      - WEBDANCER_OAI_MODEL_NAME=${WEBDANCER_OAI_MODEL_NAME}
+      - WEBDANCER_OAI_API_KEY=${WEBDANCER_OAI_API_KEY:-EMPTY}
+    networks:
+      - agents-net
+    restart: unless-stopped
+    # No host ports exposed, for internal Agent Zero access
+
+  sglang_server_websailor:
+    build:
+      context: ./research_agent/WebSailor # Uses the same Dockerfile base environment
+      dockerfile: Dockerfile
+    command: >
+      sh -c "
+      echo 'Starting SGLang server for WebSailor... Model: $$WEBSAILOR_SGLANG_MODEL_IDENTIFIER';
+      python -m sglang.launch_server \
+        --model-path $$WEBSAILOR_SGLANG_MODEL_IDENTIFIER \
+        --host 0.0.0.0 \
+        --port 6001 \
+        --tp ${WEBSAILOR_SGLANG_TP_SIZE:-1}
+      "
+    environment:
+      - WEBSAILOR_SGLANG_MODEL_IDENTIFIER=${WEBSAILOR_SGLANG_MODEL_IDENTIFIER}
+      - WEBSAILOR_SGLANG_TP_SIZE=${WEBSAILOR_SGLANG_TP_SIZE:-1}
+      # Potentially NVIDIA_VISIBLE_DEVICES if GPUs are used and managed this way
+    volumes: # Mount models if they are large and stored outside the image
+      - ./models:/models # Example, adjust path as needed
+    deploy: # Requires Docker Swarm or Compose v2.1+ for GPU access
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1 # Request 1 GPU, adjust as needed
+              capabilities: [gpu]
+    networks:
+      - agents-net
+    restart: unless-stopped
+    # No host port exposed for SGLang, only internal to agents-net or via shared network namespace
+
+  research_agent_websailor_api:
+    build:
+      context: ./research_agent/WebSailor
+      dockerfile: Dockerfile
+    command: uvicorn src.api_wrapper:app --host 0.0.0.0 --port 8002 # Internal port for the API
+    environment:
+      - WEBSAILOR_SGLANG_MODEL_IDENTIFIER=${WEBSAILOR_SGLANG_MODEL_IDENTIFIER}
+      - WEBSAILOR_LLM_LOCAL_PATH_FOR_TOKENIZER=${WEBSAILOR_LLM_LOCAL_PATH_FOR_TOKENIZER}
+      - WEBSAILOR_MAX_LLM_CALLS=${WEBSAILOR_MAX_LLM_CALLS:-20}
+      - WEBSAILOR_TEMPERATURE=${WEBSAILOR_TEMPERATURE:-0.6}
+      - WEBSAILOR_TOP_P=${WEBSAILOR_TOP_P:-0.95}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY} # For WebSailor's tools, if needed
+      - JINA_API_KEY=${JINA_API_KEY}     # For WebSailor's tools, if needed
+      - DASHSCOPE_API_KEY=${DASHSCOPE_API_KEY} # If any part of WebSailor/tools uses it
+    depends_on:
+      - sglang_server_websailor
+    networks:
+      agents-net: {}
+    # network_mode: "service:sglang_server_websailor" # This allows API to access SGLang via localhost:6001
+    # The above line is crucial if ReactAgent hardcodes localhost:6001.
+    # If ReactAgent can be configured to use 'sglang_server_websailor:6001', then normal bridge networking is fine.
+    # For now, I will assume ReactAgent needs localhost and thus will use network_mode.
+    # UPDATE: network_mode: service: is tricky with depends_on.
+    # A better way: ReactAgent's call_server needs to be configurable.
+    # For now, I will assume the API service can reach sglang_server_websailor:6001.
+    # The hardcoding in ReactAgent is an issue to be fixed there.
+    # If SGLang runs on 0.0.0.0:6001 in its container, then research_agent_websailor_api
+    # can call http://sglang_server_websailor:6001.
+    # IMPORTANT: The research_agent/WebSailor/src/react_agent.py currently hardcodes its SGLang server
+    # to "http://127.0.0.1:6001/v1". For this service to connect correctly to the
+    # `sglang_server_websailor` service, `react_agent.py` MUST be modified to accept a configurable
+    # SGLang URL (e.g., via an environment variable like SGLANG_API_BASE="http://sglang_server_websailor:6001/v1").
+    # Without that change in react_agent.py, this setup will likely fail as localhost:6001 inside
+    # this container will not point to the sglang_server_websailor container unless network_mode: service is used,
+    # which has its own complexities.
+    restart: unless-stopped
+    # No host ports exposed for the API service itself.
 
   livekit:
     image: livekit/livekit-server:latest

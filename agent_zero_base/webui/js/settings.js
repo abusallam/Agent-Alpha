@@ -123,6 +123,52 @@ const settingsModalProxy = {
             modalAD.isOpen = true;
             modalAD.settings = settings;
 
+            // --- BEGIN MODIFICATION: Inject external agent links ---
+            const externalServicesSection = modalAD.settings.sections.find(s => s.id === 'external_services' && s.tab === 'external');
+            if (externalServicesSection) {
+                const newLinks = [
+                    {
+                        id: 'agent_alpha_ui_link',
+                        title: 'Agent Alpha UI',
+                        description: 'Access the Agent Alpha dashboard and monitoring tools.',
+                        type: 'external-link',
+                        url: 'http://localhost:8082', // Port from docker-compose.yml
+                        readonly: true // Make it appear like a button/link
+                    },
+                    {
+                        id: 'webwalker_ui_link',
+                        title: 'WebWalker UI',
+                        description: 'Access the WebWalker (Streamlit) interface.',
+                        type: 'external-link',
+                        url: 'http://localhost:7860', // Port from docker-compose.yml
+                        readonly: true
+                    },
+                    {
+                        id: 'webdancer_ui_link',
+                        title: 'WebDancer UI',
+                        description: 'Access the WebDancer (Gradio) interface.',
+                        type: 'external-link',
+                        url: 'http://localhost:7861', // Port from docker-compose.yml
+                        readonly: true
+                    }
+                    // WebSailor UI link is omitted as no UI was found
+                ];
+
+                // Add new links, ensuring not to duplicate if this code runs multiple times (e.g. modal reopen)
+                newLinks.forEach(newLink => {
+                    if (!externalServicesSection.fields.some(field => field.id === newLink.id)) {
+                        externalServicesSection.fields.push(newLink);
+                    }
+                });
+            } else {
+                // If external_services section doesn't exist, create it (less ideal, assumes certain structure)
+                // This part is a fallback and might need adjustment based on actual settings structure.
+                // For now, we assume 'external_services' section with tab 'external' is predefined by backend.
+                console.warn("Could not find 'external_services' section for 'external' tab to inject links.");
+            }
+            // --- END MODIFICATION ---
+
+
             // Now set the active tab after the modal is open
             // This ensures Alpine reactivity works as expected
             setTimeout(() => {

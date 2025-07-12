@@ -8,6 +8,8 @@ This simplified diagram illustrates the hierarchical relationship between agents
 
 The user or Agent 0 is at the top of the hierarchy, delegating tasks to subordinate agents, which can further delegate to other agents. Each agent can utilize tools and access the shared assets (prompts, memory, knowledge, extensions and instruments) to perform its tasks.
 
+Agent Zero is also designed to act as an orchestrator, capable of delegating specific types of tasks to external, specialized agent systems such as Agent Alpha (for advanced agent management and task execution) and Researcher Agents (like WebDancer and WebWalker for in-depth web research and information seeking). This is facilitated by dedicated tools within Agent Zero, allowing it to leverage the unique strengths of these other systems in a coordinated manner.
+
 ## Runtime Architecture
 Agent Zero's runtime architecture is built around Docker containers:
 
@@ -81,10 +83,20 @@ This architecture ensures:
 Agent Zero's architecture revolves around the following key components:
 
 ### 1. Agents
-The core actors within the framework. Agents receive instructions, reason, make decisions, and utilize tools to achieve their objectives. Agents operate within a hierarchical structure, with superior agents delegating tasks to subordinate agents.
+The core actors within the framework. Agents receive instructions, reason, make decisions, and utilize tools to achieve their objectives.
+Agent Zero itself acts as a primary interaction point and can function as an orchestrator. It operates with its own internal capabilities and can also delegate tasks.
 
-#### Agent Hierarchy and Communication
-Agent Zero employs a hierarchical agent structure, where a top-level agent (often the user) can delegate tasks to subordinate agents. This hierarchy allows for the efficient breakdown of complex tasks into smaller, more manageable sub-tasks.
+#### Agent Hierarchy, Orchestration, and Communication
+Agent Zero employs a hierarchical agent structure for internal tasks, where it can delegate to subordinate agents (`call_subordinate` tool). This allows for the efficient breakdown of complex tasks into smaller, manageable sub-tasks within its own operational scope.
+
+Furthermore, Agent Zero is equipped with tools to delegate tasks to external specialized agent systems:
+- **Agent Alpha:** For complex agent creation, management, and execution of general intelligent tasks (via `delegate_to_agent_alpha` tool). Full functionality depends on Agent Alpha's API availability.
+- **Researcher Agents (e.g., WebDancer, WebWalker, WebSailor):** For in-depth web research and information retrieval (via `perform_web_research` tool). Agent Zero interacts with these agents via their internal APIs.
+    - *WebSailor Integration Note:* The integrated WebSailor (from `abusallam/Websailor.git`) relies on an SGLang model server (run as a separate Docker service) for its operations. Its internal `ReactAgent` is currently hardcoded to access this server at `localhost:6001`, which necessitates specific network configurations or modifications to `ReactAgent` for robust Docker deployment.
+
+This multi-faceted delegation capability allows Agent Zero to act as a central coordinator, selecting the most appropriate resource (itself, an internal subordinate, or an external specialized agent) for a given task or sub-task.
+
+Communication flows between agents through messages, which are structured according to the prompt templates. These messages typically include:
 
 Communication flows between agents through messages, which are structured according to the prompt templates. These messages typically include:
 
