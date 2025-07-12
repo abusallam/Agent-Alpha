@@ -26,8 +26,10 @@ services:
       - redis
       - agent_alpha
       - agent_alpha_frontend
-      - research_agent_webwalker
-      - research_agent_webdancer
+      - research_agent_webwalker_ui
+      - research_agent_webwalker_api
+      - research_agent_webdancer_ui
+      - research_agent_webdancer_api
     networks:
       - agents-net
     restart: unless-stopped
